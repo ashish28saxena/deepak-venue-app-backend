@@ -31,17 +31,10 @@ app.use("/api/venues", venueRoutes);
 app.use("/api/contact", contactRoutesurl);
 
 // MongoDB
-mongoose
-  .connect(process.env.MONGO_URI)
-  .then(() => {
-    console.log("MongoDB connected");
+mongoose.connect(process.env.MONGODB_URI)
+  .then(() => console.log("MongoDB connected"))
+  .catch((err) => console.error("MongoDB connection failed:", err.message));
 
-    app.listen(process.env.PORT, () => {
-      console.log(
-        `Server running on http://localhost:${process.env.PORT}`
-      );
-    });
-  })
-  .catch((error) => {
-    console.error("MongoDB connection error:", error);
-  });
+
+
+
