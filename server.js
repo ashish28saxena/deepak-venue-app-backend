@@ -23,7 +23,7 @@ app.use(
 
 // Routes
 const authRoutes = require("./routes/authRoutes");
-const venueRoutes = require("./routes/venueroutes");
+const venueRoutes = require("./routes/Venueroutes");
 const contactRoutesurl=require("./routes/contactRoutes");
 
 app.use("/api/auth", authRoutes);
