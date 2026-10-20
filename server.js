@@ -1,3 +1,4 @@
+
 const express = require("express");
 const mongoose = require("mongoose");
 require("dotenv").config();
@@ -7,16 +8,15 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
- const authRoutes = require("./routes/authRoutes");
- const venueRoutes = require("./routes/Venueroutes");
-const contactRoutesurl=require("./routes/contactRoutes");
+// Import routes
+const authRoutes = require("./routes/authRoutes");
+const venueRoutes = require("./routes/Venueroutes");
+const contactRoutes = require("./routes/contactRoutes");
 
-// Routes
-//app.use("/api/venues", require("./routes/Venueroutes"));
-
- app.use("/api/auth", authRoutes);
- app.use("/api/venues", venueRoutes);
- app.use("/api/contact", contactRoutesurl);
+// Register routes
+app.use("/api/auth", authRoutes);
+app.use("/api/venues", venueRoutes);
+app.use("/api/contact", contactRoutes);
 
 // Health check
 app.get("/", (req, res) => {
@@ -26,24 +26,48 @@ app.get("/", (req, res) => {
   });
 });
 
+// Reuse MongoDB connection across serverless invocations
+let cachedConnection = null;
 
-mongoose
-  .connect(process.env.MONGO_URI)
-  .then(() => console.log("MongoDB connected"))
-  .catch((err) => console.error("MongoDB error:", err.message));
+async function connectDB() {
+  if (mongoose.connection.readyState === 1) {
+    return mongoose.connection;
+  }
 
-// Export Express app for Vercel
+  if (!cachedConnection) {
+    cachedConnection = mongoose.connect(process.env.MONGO_URI)
+      .catch((err) => {
+        cachedConnection = null;
+        throw err;
+      });
+  }
+
+  await cachedConnection;
+  return mongoose.connection;
+}
+
+// Ensure DB is connected before handling requests
+app.use(async (req, res, next) => {
+  try {
+    await connectDB();
+    next();
+  } catch (err) {
+    console.error("MongoDB connection failed:", err.message);
+    res.status(500).json({
+      success: false,
+      message: "Database connection failed"
+    });
+  }
+});
+
+// Export app for Vercel
 module.exports = app;
 
-
+// Local development
 if (require.main === module) {
   const PORT = process.env.PORT || 5000;
+
   app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
   });
 }
-
-
-
-
-
