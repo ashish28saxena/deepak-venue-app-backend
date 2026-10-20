@@ -8,61 +8,75 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Import routes
-const authRoutes = require("./routes/authRoutes");
-const venueRoutes = require("./routes/Venueroutes");
-const contactRoutes = require("./routes/contactRoutes");
+// MongoDB connection cache for Vercel serverless
+let cached = global.mongoose;
 
-// Register routes
-app.use("/api/auth", authRoutes);
-app.use("/api/venues", venueRoutes);
-app.use("/api/contact", contactRoutes);
+if (!cached) {
+  cached = global.mongoose = {
+    conn: null,
+    promise: null,
+  };
+}
+
+async function connectDB() {
+  if (cached.conn && mongoose.connection.readyState === 1) {
+    return cached.conn;
+  }
+
+  if (!cached.promise) {
+    const uri = process.env.MONGODB_URI;
+
+    if (!uri) {
+      throw new Error("MONGODB_URI environment variable is missing");
+    }
+
+    cached.promise = mongoose.connect(uri, {
+      serverSelectionTimeoutMS: 10000,
+    });
+  }
+
+  try {
+    cached.conn = await cached.promise;
+    console.log("MongoDB connected successfully");
+    return cached.conn;
+  } catch (error) {
+    cached.promise = null;
+    cached.conn = null;
+    console.error("MongoDB connection failed:", error.message);
+    throw error;
+  }
+}
 
 // Health check
 app.get("/", (req, res) => {
   res.status(200).json({
     success: true,
-    message: "API is running"
+    message: "API is running",
   });
 });
 
-// Reuse MongoDB connection across serverless invocations
-let cachedConnection = null;
-
-const connectDB = async () => {
-  try {
-    await mongoose.connect(process.env.MONGODB_URI);
-    console.log("MongoDB connected");
-  } catch (error) {
-    console.error("MongoDB connection failed:", error.message);
-    throw error;
-  }
-};
-
-module.exports = connectDB;
-
-// Ensure DB is connected before handling requests
+// Connect to MongoDB BEFORE running API routes
 app.use(async (req, res, next) => {
   try {
     await connectDB();
     next();
-  } catch (err) {
-    console.error("MongoDB connection failed:", err.message);
-    res.status(500).json({
+  } catch (error) {
+    return res.status(500).json({
       success: false,
-      message: "Database connection failed"
+      message: "Database connection failed",
     });
   }
 });
 
-// Export app for Vercel
+// Import routes
+const authRoutes = require("./routes/authRoutes");
+const venueRoutes = require("./routes/Venueroutes");
+const contactRoutes = require("./routes/contactRoutes");
+
+// Register routes AFTER the database middleware
+app.use("/api/auth", authRoutes);
+app.use("/api/venues", venueRoutes);
+app.use("/api/contact", contactRoutes);
+
+// Export Express app for Vercel
 module.exports = app;
-
-// Local development
-if (require.main === module) {
-  const PORT = process.env.PORT || 5000;
-
-  app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
-  });
-}
