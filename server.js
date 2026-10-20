@@ -1,39 +1,48 @@
 const express = require("express");
 const mongoose = require("mongoose");
-const cors = require("cors");
-const dotenv = require("dotenv");
-const path = require("path");
-
-dotenv.config();
+require("dotenv").config();
 
 const app = express();
 
-app.use(cors());
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
-// Uploaded images serve karo (frontend alag port par hai, isliye CORP header zaroori hai)
-app.use(
-  "/uploads",
-  (req, res, next) => {
-    res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
-    next();
-  },
-  express.static(path.join(__dirname, "uploads"))
-);
-
-// Routes
-const authRoutes = require("./routes/authRoutes");
-const venueRoutes = require("./routes/Venueroutes");
+ const authRoutes = require("./routes/authRoutes");
+ const venueRoutes = require("./routes/Venueroutes");
 const contactRoutesurl=require("./routes/contactRoutes");
 
-app.use("/api/auth", authRoutes);
-app.use("/api/venues", venueRoutes);
-app.use("/api/contact", contactRoutesurl);
+// Routes
+//app.use("/api/venues", require("./routes/Venueroutes"));
 
-// MongoDB
-mongoose.connect(process.env.MONGODB_URI)
+ app.use("/api/auth", authRoutes);
+ app.use("/api/venues", venueRoutes);
+ app.use("/api/contact", contactRoutesurl);
+
+// Health check
+app.get("/", (req, res) => {
+  res.status(200).json({
+    success: true,
+    message: "API is running"
+  });
+});
+
+
+mongoose
+  .connect(process.env.MONGO_URI)
   .then(() => console.log("MongoDB connected"))
-  .catch((err) => console.error("MongoDB connection failed:", err.message));
+  .catch((err) => console.error("MongoDB error:", err.message));
+
+// Export Express app for Vercel
+module.exports = app;
+
+
+if (require.main === module) {
+  const PORT = process.env.PORT || 5000;
+  app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+  });
+}
+
 
 
 
