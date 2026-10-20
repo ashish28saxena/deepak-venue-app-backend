@@ -29,22 +29,17 @@ app.get("/", (req, res) => {
 // Reuse MongoDB connection across serverless invocations
 let cachedConnection = null;
 
-async function connectDB() {
-  if (mongoose.connection.readyState === 1) {
-    return mongoose.connection;
+const connectDB = async () => {
+  try {
+    await mongoose.connect(process.env.MONGODB_URI);
+    console.log("MongoDB connected");
+  } catch (error) {
+    console.error("MongoDB connection failed:", error.message);
+    throw error;
   }
+};
 
-  if (!cachedConnection) {
-    cachedConnection = mongoose.connect(process.env.MONGO_URI)
-      .catch((err) => {
-        cachedConnection = null;
-        throw err;
-      });
-  }
-
-  await cachedConnection;
-  return mongoose.connection;
-}
+module.exports = connectDB;
 
 // Ensure DB is connected before handling requests
 app.use(async (req, res, next) => {
