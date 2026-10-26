@@ -125,7 +125,7 @@ exports.login = async (req, res) => {
         message: "Invalid email or password",
       });
     }
-
+    console.log("JWT_SECRET configured:", !!process.env.JWT_SECRET);
     // JWT
     const token = jwt.sign(
       {
