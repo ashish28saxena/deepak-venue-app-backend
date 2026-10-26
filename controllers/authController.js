@@ -1,6 +1,7 @@
 const User = require("../models/User");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+console.log("AUTH CONTROLLER v2 LOADED");
 
 // JWT TOKEN GENERATOR
 const generateToken = (user) => {
