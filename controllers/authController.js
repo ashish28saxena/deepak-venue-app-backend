@@ -1,4 +1,3 @@
-
 const User = require("../models/User");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
@@ -7,15 +6,9 @@ const jwt = require("jsonwebtoken");
 const generateToken = (user) => {
   const jwtSecret = process.env.JWT_SECRET;
 
-console.log("JWT_SECRET available:", Boolean(jwtSecret));
-
-if (!jwtSecret) {
-  return res.status(500).json({
-    success: false,
-    message: "JWT_SECRET is missing in Vercel environment"
-  });
-}
-
+  if (!jwtSecret) {
+    throw new Error("JWT_SECRET environment variable is missing");
+  }
 
   return jwt.sign(
     {
