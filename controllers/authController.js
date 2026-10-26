@@ -1,6 +1,27 @@
+
 const User = require("../models/User");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+
+// JWT TOKEN GENERATOR
+const generateToken = (user) => {
+  const jwtSecret = process.env.JWT_SECRET;
+
+  if (!jwtSecret || !jwtSecret.trim()) {
+    throw new Error("JWT_SECRET environment variable is missing");
+  }
+
+  return jwt.sign(
+    {
+      userId: user._id,
+      email: user.email,
+    },
+    jwtSecret,
+    {
+      expiresIn: "7d",
+    }
+  );
+};
 
 // SIGNUP
 exports.signup = async (req, res) => {
@@ -21,8 +42,6 @@ exports.signup = async (req, res) => {
         message: "All required fields are required",
       });
     }
-
-    
 
     // Check username
     const existingUsername = await User.findOne({ username });
@@ -57,19 +76,10 @@ exports.signup = async (req, res) => {
       iAgree,
     });
 
-    // JWT
-    const token = jwt.sign(
-      {
-        userId: user._id,
-        email: user.email,
-      },
-      process.env.JWT_SECRET,
-      {
-        expiresIn: "7d",
-      }
-    );
+    // Generate JWT
+    const token = generateToken(user);
 
-    res.status(201).json({
+    return res.status(201).json({
       success: true,
       message: "Signup successful",
       token,
@@ -82,9 +92,23 @@ exports.signup = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error(error);
+    console.error("Signup error:", error.message);
 
-    res.status(500).json({
+    if (error.message === "JWT_SECRET environment variable is missing") {
+      return res.status(500).json({
+        success: false,
+        message: "Server configuration error. Please contact support.",
+      });
+    }
+
+    if (error.code === 11000) {
+      return res.status(409).json({
+        success: false,
+        message: "Username or email already exists",
+      });
+    }
+
+    return res.status(500).json({
       success: false,
       message: "Server error",
     });
@@ -125,23 +149,14 @@ exports.login = async (req, res) => {
         message: "Invalid email or password",
       });
     }
-    console.log("JWT_SECRET configured:", !!process.env.JWT_SECRET);
-    // JWT
-    // const token = jwt.sign(
-    //   {
-    //     userId: user._id,
-    //     email: user.email,
-    //   },
-    //   process.env.JWT_SECRET,
-    //   {
-    //     expiresIn: "7d",
-    //   }
-    // );
 
-    res.status(200).json({
+    // Generate JWT
+    const token = generateToken(user);
+
+    return res.status(200).json({
       success: true,
       message: "Login successful",
-      //token,
+      token,
       user: {
         id: user._id,
         fullName: user.fullName,
@@ -151,9 +166,16 @@ exports.login = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error(error);
+    console.error("Login error:", error.message);
 
-    res.status(500).json({
+    if (error.message === "JWT_SECRET environment variable is missing") {
+      return res.status(500).json({
+        success: false,
+        message: "Server configuration error. Please contact support.",
+      });
+    }
+
+    return res.status(500).json({
       success: false,
       message: "Server error",
     });
