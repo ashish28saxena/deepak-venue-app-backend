@@ -127,21 +127,21 @@ exports.login = async (req, res) => {
     }
     console.log("JWT_SECRET configured:", !!process.env.JWT_SECRET);
     // JWT
-    const token = jwt.sign(
-      {
-        userId: user._id,
-        email: user.email,
-      },
-      process.env.JWT_SECRET,
-      {
-        expiresIn: "7d",
-      }
-    );
+    // const token = jwt.sign(
+    //   {
+    //     userId: user._id,
+    //     email: user.email,
+    //   },
+    //   process.env.JWT_SECRET,
+    //   {
+    //     expiresIn: "7d",
+    //   }
+    // );
 
     res.status(200).json({
       success: true,
       message: "Login successful",
-      token,
+      //token,
       user: {
         id: user._id,
         fullName: user.fullName,
